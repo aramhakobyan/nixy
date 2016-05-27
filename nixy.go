@@ -17,11 +17,16 @@ import (
 	"github.com/peterbourgon/g2s"
 )
 
+type Frontend struct {
+	Type string
+	Data []string
+}
+
 type App struct {
-	Tasks  []string
-	Labels map[string]string
-	Env    map[string]string
-	Hosts  []string
+	Tasks     [][]string
+	Frontends []Frontend
+	Labels    map[string]string
+	Env       map[string]string
 }
 
 type Config struct {

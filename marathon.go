@@ -259,7 +259,6 @@ func syncApps(jsontasks *MarathonTasks, jsonapps *MarathonApps) {
 	defer config.Unlock()
 	config.Apps = make(map[string]App)
 	for _, app := range jsonapps.Apps {
-	OUTER:
 		for _, task := range jsontasks.Tasks {
 			if task.AppId != app.Id {
 				continue
@@ -285,40 +284,28 @@ func syncApps(jsontasks *MarathonTasks, jsonapps *MarathonApps) {
 					continue
 				}
 			}
-			if s, ok := config.Apps[app.Id]; ok {
-				s.Tasks = append(s.Tasks, task.Host+":"+strconv.FormatInt(task.Ports[0], 10))
-				config.Apps[app.Id] = s
+			if a, ok := config.Apps[app.Id]; ok {
+				for index, port := range task.Ports {
+					a.Tasks[index] = append(a.Tasks[index], task.Host + ":" + strconv.FormatInt(port, 10))
+					config.Apps[app.Id] = a
+				}
 			} else {
 				var newapp = App{}
-				newapp.Tasks = []string{task.Host + ":" + strconv.FormatInt(task.Ports[0], 10)}
-				if s, ok := app.Labels["subdomain"]; ok {
-					hosts := strings.Split(s, " ")
-					for _, host := range hosts {
-						newapp.Hosts = append(newapp.Hosts, host)
-					}
-				} else if s, ok := app.Labels["moxy_subdomain"]; ok {
-					// to be compatible with moxy
-					hosts := strings.Split(s, " ")
-					for _, host := range hosts {
-						newapp.Hosts = append(newapp.Hosts, host)
-					}
-				} else {
-					// return the base name of app id, needed if directories are used.
-					base := filepath.Base(app.Id)
-					newapp.Hosts = append(newapp.Hosts, base)
+				newapp.Tasks = [][]string{}
+				for _, port := range task.Ports {
+					newapp.Tasks = append(newapp.Tasks, []string{task.Host + ":" + strconv.FormatInt(port, 10)})
 				}
-				for _, confapp := range config.Apps {
-					for _, host := range confapp.Hosts {
-						for _, newhost := range newapp.Hosts {
-							if newhost == host {
-								logger.WithFields(logrus.Fields{
-									"app":       app.Id,
-									"subdomain": host,
-								}).Warn("duplicate subdomain label, ignoring app")
-								continue OUTER
-							}
+				if fl, ok := app.Labels["frontends"]; ok {
+					fa := strings.Split(fl, " ")
+					newapp.Frontends = []Frontend{}
+					for _, f := range fa {
+						if (len(newapp.Frontends) < len(task.Ports)) {
+							fdt := strings.Split(f, "/")
+							newapp.Frontends = append(newapp.Frontends, Frontend{Type:fdt[1], Data:strings.Split(fdt[0], ",")})
 						}
 					}
+				} else {
+					newapp.Frontends = []Frontend{}
 				}
 				newapp.Labels = app.Labels
 				newapp.Env = app.Env
