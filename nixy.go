@@ -32,7 +32,6 @@ type App struct {
 
 type Config struct {
 	sync.RWMutex
-	LastUpdate     time.Time
 	Xproxy         string
 	Port           string   `json:"-"`
 	Marathon       []string `json:"-"`
