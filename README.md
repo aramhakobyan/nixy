@@ -2,52 +2,55 @@
 ![nginx
 gopher](https://raw.githubusercontent.com/martensson/nixy/master/nixy-gopher.png)
 
-Nixy is a daemon that automatically configures Nginx for web services deployed on [Apache Mesos](http://mesos.apache.org) and [Marathon](https://mesosphere.github.io/marathon/). It's an evolution of [moxy](https://github.com/martensson/moxy) but with a greatly improved feature set thanks to the Nginx reverse proxy.
+Nixy is a daemon that automatically configures Nginx for web services deployed on [Apache Mesos](http://mesos.apache.org) and [Marathon](https://mesosphere.github.io/marathon/).
 
 **Features:**
 
 * Reverse proxy and load balancer for your microservices running inside Mesos and Marathon
 * Single binary with no other dependencies *(except Nginx/Openresty)*
 * Written in Go to be blazingly fast and concurrent.
-* All the features you get with Nginx:
+* All the features you would expect from Nginx:
     * HTTP/TCP load balancing, HTTP/2 termination, websockets, SSL/TLS termination, caching/compression, authentication, media streaming, static file serving, etc.
-* Zero downtime with Nginx fallback mechanism for sick backends and hot config reload.
-* Easy to customize with templating.
-* Statistics via statsd *(successfull/failed updates, timings)*.
-* Real-time updates via Marathon's event stream *(Marathon v0.9.0), no need for callbacks.*
+* Zero downtime with Nginx fall-back mechanism for sick backends and hot config reload.
+* Easy to customize your needs with templating.
+* Statistics via statsd *(successful/failed updates, timings)*.
+* Real-time updates via Marathon's event stream *(Marathon v0.9.0), so no need for callbacks.*
 * Support for Marathon HA cluster, auto detects sick endpoints.
-* Automatic service discovery of all running tasks inside Mesos/Marathon, including health status.
+* Automatic service discovery of all running tasks inside Mesos/Marathon, including their health status.
 * Basic auth support.
-* Health check probe for errors in template or nginx configuration.
+* Health checks for errors in template, nginx config or Marathon endpoints.
+* ....
 
 ## Compatibility
 
-All versions of Marathon >= v0.9.0
+- All versions of Marathon >= v0.9.0
+- All versions of Nginx. Also compatible with [OpenResty](http://openresty.org/en/).
 
 ## Getting started
 
 1. Install nixy from pre-compiled packages. Check `releases` page.
 2. Edit config *(default on ubuntu is /etc/nixy.toml)*:
+
     ``` toml
     # nixy listening port
     port = "6000"
-
     # optional X-Proxy header name
     xproxy = "hostname"
-    
     # marathon api
     marathon = ["http://example01:8080", "http://example02:8080"] # add all HA cluster nodes in priority order.
     user = "" # leave empty if no auth is required.
     pass = ""
-    
     # nginx
     nginx_config = "/etc/nginx/nginx.conf"
     nginx_template = "/etc/nginx/nginx.tmpl"
-    nginx_cmd = "nginx" # optinally openresty
-    
+    nginx_cmd = "nginx" # optionally openresty
     # statsd settings
-    statsd = "localhost:8125" # optional for statistics
+    [statsd]
+    addr = "localhost:8125" # optional for statistics
+    #namespace = "nixy.my_mesos_cluster"
+    #sample_rate = 100
     ```
+
 3. Optionally edit the nginx template *(default on ubuntu is /etc/nginx/nginx.tmpl)*
 4. Install [nginx](http://nginx.org/en/download.html) or [openresty](https://openresty.org/) and start the service.
 5. Start nixy! *(service nixy start)*
@@ -87,7 +90,7 @@ This will now match both `foo` and `bar` as the new subdomain/host.
 
 ### Template
 
-Nixy uses the standard Go (Golang) [template package](https://golang.org/pkg/text/template/) to generate its config. It's a powerful and easy to use language to fully customize the nginx config. The default template is meant to be a working base that adds some sane defaults for Nginx. Just extend it or modify to suite your environment the best.
+Nixy uses the standard Go (Golang) [template package](https://golang.org/pkg/text/template/) to generate its config. It's a powerful and easy to use language to fully customize the nginx config. The default template is meant to be a working base that adds some sane defaults for Nginx. If needed just extend it or modify to suite your environment the best.
 
 Examples:
 
@@ -119,11 +122,15 @@ add_header X-Environment {{ $app.Env.APP_ENV }} always;
 {{- end}}
 ```
 
-If you are unsure of what variables you can use inside your template just do a `GET /v1/config` and you will receive a json response of everything available. All labels and environment variables are available. Other options could be to enable websockets, HTTP/2, SSL/TLS, or to control ports, logging, load balancing method, or any other custom settings your applications need.
+If you are unsure of what variables you can use inside your template just do a `GET /v1/config` and you will receive a JSON response of everything available. All labels and environment variables are available. Other options could be to enable websockets, HTTP/2, SSL/TLS, or to control ports, logging, load balancing method, or any other custom settings your applications need.
 
 ### Nixy API
 
 - `GET /` prints nixy version.
-- `GET /v1/config` list all variables available inside the template.
-- `GET /v1/reload` manually trigger a new config.
-- `GET /v1/health` Responds 200 OK if template, config and endpoints are working. Else 500 Server Error with reason.
+- `GET /v1/config` JSON response with all variables available inside the template.
+- `GET /v1/reload` manually trigger a new config reload.
+- `GET /v1/health` JSON response with health status of template, nginx config and Marathon endpoints available.
+
+### Nagios Monitoring
+
+In case you want to monitor nixy using Nagios (or compatible monitoring) you can use the included `check_nixy` plugin.

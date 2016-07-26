@@ -1,0 +1,45 @@
+#!/usr/bin/env python2.7
+import json
+import urllib2
+import sys
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-u', '--url', required=True, help="Nixy Health API URL")
+args = parser.parse_args()
+
+try:
+    resp = urllib2.urlopen(args.url)
+except urllib2.URLError, e:
+    print "NIXY CRITICAL - %s" % e
+    sys.exit(2)
+
+try:
+    health = json.loads(resp.read())
+except ValueError, e:
+    print "NIXY CRITICAL - %s" % e
+    sys.exit(2)
+
+if not health['Config']['Healthy']:
+    print "NIXY CRITICAL - %s" % health['Config']['Message']
+    sys.exit(2)
+
+if not health['Template']['Healthy']:
+    print "NIXY CRITICAL - %s" % health['Template']['Message']
+    sys.exit(2)
+
+total = len(health['Endpoints'])
+sick = 0
+for endpoint in health['Endpoints']:
+    if not endpoint['Healthy']:
+        sick += 1
+if sick > 0 and sick < total:
+    print "NIXY WARNING - %s/%s Marathon endpoints are down. Check %s for details." \
+        % (sick, total, args.url)
+    sys.exit(1)
+elif sick == total:
+    print "NIXY CRITICAL - All Marathon endpoints are down"
+    sys.exit(2)
+else:
+    print "NIXY OK"
+    sys.exit(0)
