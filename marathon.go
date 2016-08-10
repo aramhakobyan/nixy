@@ -89,7 +89,7 @@ func eventStream() {
 			}
 			cancel := make(chan struct{})
 			// initial request cancellation timer of 15s
-			timer := time.AfterFunc(15 * time.Second, func() {
+			timer := time.AfterFunc(15*time.Second, func() {
 				defer func() {
 					recover()
 				}()
@@ -365,19 +365,29 @@ func syncApps(jsontasks *MarathonTasks, jsonapps *MarathonApps) {
 }
 
 func writeConf() error {
-	t, err := template.New(filepath.Base(config.Nginx_template)).ParseFiles(config.Nginx_template)
+	template, err := template.New(filepath.Base(config.Nginx_template)).ParseFiles(config.Nginx_template)
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(config.Nginx_config)
-	defer f.Close()
+
+	tmpFile, err := ioutil.TempFile("", "nixy")
+	defer tmpFile.Close()
+
+	err = template.Execute(tmpFile, config)
 	if err != nil {
 		return err
 	}
-	err = t.Execute(f, config)
+
+	err = checkConf(tmpFile.Name())
 	if err != nil {
 		return err
 	}
+
+	err = os.Rename(tmpFile.Name(), config.Nginx_config)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -393,8 +403,8 @@ func checkTmpl() error {
 	return nil
 }
 
-func checkConf() error {
-	cmd := exec.Command(config.Nginx_cmd, "-c", config.Nginx_config, "-t")
+func checkConf(path string) error {
+	cmd := exec.Command(config.Nginx_cmd, "-c", path, "-t")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run() // will wait for command to return
