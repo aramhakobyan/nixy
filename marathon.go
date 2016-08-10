@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -18,6 +19,17 @@ import (
 
 	"github.com/Sirupsen/logrus"
 )
+
+var frontendExpressions = []string{
+	"^[0-9a-z-]+(,[0-9a-z-]+)*/http$",
+	"^[0-9a-z-]+(,[0-9a-z-]+)*/http-public$",
+	"^[a-z.-]+(,[a-z.-]+)*/partner$",
+	"^[a-z-]+(,[a-z-]+)*/shop-dev$",
+	"^[a-z.-]+(,[a-z.-]+)*/shop$",
+	"^[0-9]+(,[0-9]+)*/tcp$",
+}
+var frontendRegexp = regexp.MustCompile(strings.Join(frontendExpressions, "|"))
+var spaceRegexp = regexp.MustCompile("\\s+")
 
 type MarathonTasks struct {
 	Tasks []struct {
@@ -321,24 +333,31 @@ func syncApps(jsontasks *MarathonTasks, jsonapps *MarathonApps) {
 				}
 			} else {
 				var newapp = App{}
+				newapp.Env = app.Env
+				newapp.Labels = app.Labels
 				newapp.Tasks = [][]string{}
 				for _, port := range task.Ports {
 					newapp.Tasks = append(newapp.Tasks, []string{task.Host + ":" + strconv.FormatInt(port, 10)})
 				}
-				if fl, ok := app.Labels["frontends"]; ok {
-					fa := strings.Split(fl, " ")
-					newapp.Frontends = []Frontend{}
-					for _, f := range fa {
-						if (len(newapp.Frontends) < len(task.Ports)) {
-							fdt := strings.Split(f, "/")
-							newapp.Frontends = append(newapp.Frontends, Frontend{Type:fdt[1], Data:strings.Split(fdt[0], ",")})
+				newapp.Frontends = []Frontend{}
+				if frontendsLabel, ok := app.Labels["frontends"]; ok {
+					frontends := spaceRegexp.Split(frontendsLabel, -1)
+					if (len(frontends) <= len(task.Ports)) {
+						for _, frontend := range frontends {
+							if frontendRegexp.MatchString(frontend) {
+								frontendDataAndType := strings.Split(frontend, "/")
+								frontendType := frontendDataAndType[1]
+								frontendData := strings.Split(frontendDataAndType[0], ",")
+								newapp.Frontends = append(newapp.Frontends, Frontend{Type:frontendType, Data:frontendData})
+							} else {
+								newapp.Frontends = []Frontend{ Frontend{ Type:"error", Data:[]string{"frontend " + frontend + " not recognized" } } }
+								break
+							}
 						}
+					} else {
+						newapp.Frontends = []Frontend{ Frontend{ Type:"error", Data:[]string{"more frontends defined than ports exposed" } } }
 					}
-				} else {
-					newapp.Frontends = []Frontend{}
 				}
-				newapp.Labels = app.Labels
-				newapp.Env = app.Env
 				config.Apps[app.Id] = newapp
 			}
 		}
