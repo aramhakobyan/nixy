@@ -24,7 +24,7 @@ var frontendExpressions = []string{
 	"^[0-9a-z-]+(,[0-9a-z-]+)*/http$",
 	"^[0-9a-z-]+(,[0-9a-z-]+)*/http-public$",
 	"^[a-z.-]+(,[a-z.-]+)*/partner$",
-	"^[a-z-]+(,[a-z-]+)*/shop-dev$",
+	"^[0-9a-z-]+(,[0-9a-z-]+)*/shop-dev$",
 	"^[a-z.-]+(,[a-z.-]+)*/shop$",
 	"^[0-9]+(,[0-9]+)*/tcp$",
 }
