@@ -364,8 +364,17 @@ func syncApps(jsontasks *MarathonTasks, jsonapps *MarathonApps) {
 	}
 }
 
+func fileExists(fileName string) bool {
+	if _, err := os.Stat(fileName); err == nil {
+		return true
+	}
+	return false
+}
+
 func writeConf() error {
-	template, err := template.New(filepath.Base(config.Nginx_template)).ParseFiles(config.Nginx_template)
+	template, err := template.New(filepath.Base(config.Nginx_template)).Funcs(template.FuncMap{
+		"fileExists": fileExists,
+	}).ParseFiles(config.Nginx_template)
 	if err != nil {
 		return err
 	}
@@ -393,7 +402,9 @@ func writeConf() error {
 }
 
 func checkTmpl() error {
-	t, err := template.New(filepath.Base(config.Nginx_template)).ParseFiles(config.Nginx_template)
+	t, err := template.New(filepath.Base(config.Nginx_template)).Funcs(template.FuncMap{
+		"fileExists": fileExists,
+	}).ParseFiles(config.Nginx_template)
 	if err != nil {
 		return err
 	}
