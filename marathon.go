@@ -371,9 +371,14 @@ func fileExists(fileName string) bool {
 	return false
 }
 
+func splitStr(str string) []string {
+	return strings.Split(str, " ")
+}
+
 func writeConf() error {
 	template, err := template.New(filepath.Base(config.Nginx_template)).Funcs(template.FuncMap{
 		"fileExists": fileExists,
+		"splitStr": splitStr,
 	}).ParseFiles(config.Nginx_template)
 	if err != nil {
 		return err
