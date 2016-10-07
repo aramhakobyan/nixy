@@ -409,6 +409,7 @@ func writeConf() error {
 func checkTmpl() error {
 	t, err := template.New(filepath.Base(config.Nginx_template)).Funcs(template.FuncMap{
 		"fileExists": fileExists,
+		"splitStr": splitStr,
 	}).ParseFiles(config.Nginx_template)
 	if err != nil {
 		return err
