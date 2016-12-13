@@ -26,6 +26,8 @@ var frontendExpressions = []string{
 	"^[a-z.-]+(,[a-z.-]+)*/partner$",
 	"^[0-9a-z-]+(,[0-9a-z-]+)*/shop-dev$",
 	"^[a-z.-]+(,[a-z.-]+)*/shop$",
+	"^[a-z.-]+(,[a-z.-]+)*/shop-beta$",
+	"^[a-z.-]+(,[a-z.-]+)*/shop-preview$",
 	"^[0-9]+(,[0-9]+)*/tcp$",
 }
 var frontendRegexp = regexp.MustCompile(strings.Join(frontendExpressions, "|"))
