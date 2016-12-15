@@ -16,8 +16,6 @@ import (
 	"strings"
 	"text/template"
 	"time"
-
-	"github.com/Sirupsen/logrus"
 )
 
 var frontendExpressions = []string{
@@ -79,10 +77,8 @@ func eventStream() {
 			}
 			req, err := http.NewRequest("GET", endpoint+"/v2/events", nil)
 			if err != nil {
-				logger.WithFields(logrus.Fields{
-					"error":    err.Error(),
-					"endpoint": endpoint,
-				}).Error("unable to create event stream request")
+				logger.Errorf("unable to create event stream request: error %v, endpoint %v", err.Error(),endpoint)
+
 				continue
 			}
 			req.Header.Set("Accept", "text/event-stream")
@@ -96,15 +92,12 @@ func eventStream() {
 					recover()
 				}()
 				defer close(cancel)
-				logger.Warn("event stream request was cancelled")
+				logger.Warning("event stream request was cancelled")
 			})
 			req.Cancel = cancel
 			resp, err := client.Do(req)
 			if err != nil {
-				logger.WithFields(logrus.Fields{
-					"error":    err.Error(),
-					"endpoint": endpoint,
-				}).Error("unable to access Marathon event stream")
+				logger.Errorf("unable to access Marathon event stream: error %v, endpoint %v", err.Error(),endpoint)
 				// expire request cancellation timer immediately
 				timer.Reset(100 * time.Millisecond)
 				continue
@@ -116,28 +109,23 @@ func eventStream() {
 				timer.Reset(15 * time.Second)
 				line, err := reader.ReadString('\n')
 				if err != nil {
-					logger.WithFields(logrus.Fields{
-						"error":    err.Error(),
-						"endpoint": endpoint,
-					}).Error("error reading Marathon event stream")
+					logger.Errorf("error reading Marathon event stream: error %v, endpoint %v", err.Error(),endpoint)
 					resp.Body.Close()
 					break
 				}
 				if !strings.HasPrefix(line, "event: ") {
 					continue
 				}
-				logger.WithFields(logrus.Fields{
-					"event":    strings.TrimSpace(line[6:]),
-					"endpoint": endpoint,
-				}).Info("marathon event received")
+				logger.Infof("marathon event received: error %v, endpoint %v", strings.TrimSpace(line[6:]),endpoint)
+
 				select {
 				case eventqueue <- true: // add reload to our queue channel, unless it is full of course.
 				default:
-					logger.Warn("queue is full")
+					logger.Warning("queue is full")
 				}
 			}
 			resp.Body.Close()
-			logger.Warn("event stream connection was closed, re-opening")
+			logger.Warning("event stream connection was closed, re-opening")
 		}
 	}()
 }
@@ -155,10 +143,7 @@ func endpointHealth() {
 					}
 					req, err := http.NewRequest("GET", es.Endpoint+"/ping", nil)
 					if err != nil {
-						logger.WithFields(logrus.Fields{
-							"error":    err.Error(),
-							"endpoint": es.Endpoint,
-						}).Error("an error occurred creating endpoint health request")
+						logger.Errorf("an error occurred creating endpoint health request: error %v, endpoint %v", err.Error(),es.Endpoint)
 						health.Endpoints[i].Healthy = false
 						health.Endpoints[i].Message = err.Error()
 						continue
@@ -168,20 +153,14 @@ func endpointHealth() {
 					}
 					resp, err := client.Do(req)
 					if err != nil {
-						logger.WithFields(logrus.Fields{
-							"error":    err.Error(),
-							"endpoint": es.Endpoint,
-						}).Error("endpoint is down")
+						logger.Errorf("endpoint is down: error %v, endpoint %v", err.Error(),es.Endpoint)
 						health.Endpoints[i].Healthy = false
 						health.Endpoints[i].Message = err.Error()
 						continue
 					}
 					resp.Body.Close()
 					if resp.StatusCode != 200 {
-						logger.WithFields(logrus.Fields{
-							"status":   resp.StatusCode,
-							"endpoint": es.Endpoint,
-						}).Error("endpoint check failed")
+						logger.Errorf("endpoint check failed: status %s, endpoint %v", resp.StatusCode,es.Endpoint)
 						health.Endpoints[i].Healthy = false
 						health.Endpoints[i].Message = resp.Status
 						continue
@@ -209,9 +188,7 @@ func eventWorker() {
 					logger.Error("config update failed")
 					go statsCount("reload.failed", 1)
 				} else {
-					logger.WithFields(logrus.Fields{
-						"took": elapsed,
-					}).Info("config updated")
+					logger.Infof("config updated: took", elapsed)
 					go statsCount("reload.success", 1)
 					go statsTiming("reload.time", elapsed)
 				}
@@ -454,26 +431,20 @@ func reload() error {
 	jsonapps := MarathonApps{}
 	err := fetchApps(&jsontasks, &jsonapps)
 	if err != nil {
-		logger.WithFields(logrus.Fields{
-			"error": err.Error(),
-		}).Error("unable to sync from marathon")
+	        logger.Errorf("unable to sync from marathon: error %v", err.Error())
 		return err
 	}
 	syncApps(&jsontasks, &jsonapps)
 	config.LastUpdates.LastSync = time.Now()
 	err = writeConf()
 	if err != nil {
-		logger.WithFields(logrus.Fields{
-			"error": err.Error(),
-		}).Error("unable to generate nginx config")
+	        logger.Errorf("unable to generate nginx config %v", err.Error())
 		return err
 	}
 	config.LastUpdates.LastConfigValid = time.Now()
 	err = reloadNginx()
 	if err != nil {
-		logger.WithFields(logrus.Fields{
-			"error": err.Error(),
-		}).Error("unable to reload nginx")
+	        logger.Errorf("unable to reload nginx %v", err.Error())
 		return err
 	}
 	config.LastUpdates.LastNginxReload = time.Now()
