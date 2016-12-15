@@ -144,3 +144,8 @@ You will need the latest NGINX Open Source built with the --with-stream configur
 ### Nagios Monitoring
 
 In case you want to monitor nixy using Nagios (or compatible monitoring) you can use the included `check_nixy` plugin.
+
+### Logging
+
+In order to be able to customeze log fiels and having it in the desired format in the kibana/logstash, separate package has been added include "github.com/aramhakobyan/nixy/logging" (logging/json_logger.go).
+Formate of the logging is changed to Json
