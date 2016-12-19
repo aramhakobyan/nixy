@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/BurntSushi/toml"
+	"github.com/gorilla/mux"
+	"github.com/peterbourgon/g2s"
+	"github.com/zooplus/golang-logging"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
 	"time"
-	"github.com/aramhakobyan/nixy/logging"
-	"github.com/BurntSushi/toml"
-	"github.com/gorilla/mux"
-	"github.com/peterbourgon/g2s"
 )
 
 type Frontend struct {
@@ -43,10 +43,10 @@ type Config struct {
 }
 
 type Updates struct {
-	LastSync           	time.Time
-	LastConfigRendered	time.Time
-	LastConfigValid		time.Time
-	LastNginxReload    	time.Time
+	LastSync           time.Time
+	LastConfigRendered time.Time
+	LastConfigValid    time.Time
+	LastNginxReload    time.Time
 }
 
 type StatsdConfig struct {
@@ -100,7 +100,7 @@ func newHealth() Health {
 
 func nixy_reload(w http.ResponseWriter, r *http.Request) {
 
-	logger.Infof("marathon reload triggered: client", r.RemoteAddr)
+	logger.Info("marathon reload triggered: client", r.RemoteAddr)
 
 	select {
 	case eventqueue <- true: // Add reload to our queue channel, unless it is full of course.
@@ -134,9 +134,9 @@ func nixy_health(w http.ResponseWriter, r *http.Request) {
 		health.Config.Healthy = true
 	}
 	for _, endpoint := range health.Endpoints {
-		if (!endpoint.Healthy) {
+		if !endpoint.Healthy {
 			w.WriteHeader(http.StatusInternalServerError)
-			break;
+			break
 		}
 	}
 	w.Header().Add("Content-Type", "application/json; charset=utf-8")
