@@ -144,8 +144,3 @@ You will need the latest NGINX Open Source built with the --with-stream configur
 ### Nagios Monitoring
 
 In case you want to monitor nixy using Nagios (or compatible monitoring) you can use the included `check_nixy` plugin.
-
-### Logging
-
-In order to customize log fields and having it in the desired format in the kibana/logstash, separate package has been added include "github.com/zooplus/golang-logging".
-For More info https://github.com/zooplus/golang-logging
