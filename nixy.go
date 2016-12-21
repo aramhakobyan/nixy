@@ -12,7 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/g2s"
-        "github.com/zooplus/golang-logging"
+	"github.com/zooplus/golang-logging"
 )
 
 type Frontend struct {
