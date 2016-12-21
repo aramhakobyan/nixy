@@ -77,8 +77,7 @@ func eventStream() {
 			}
 			req, err := http.NewRequest("GET", endpoint+"/v2/events", nil)
 			if err != nil {
-				logger.Errorf("unable to create event stream request: error %v, endpoint %v", err.Error(),endpoint)
-
+				logger.Errorf("unable to create event stream request, error: %v, endpoint: %v", err.Error(), endpoint)
 				continue
 			}
 			req.Header.Set("Accept", "text/event-stream")
@@ -97,7 +96,7 @@ func eventStream() {
 			req.Cancel = cancel
 			resp, err := client.Do(req)
 			if err != nil {
-				logger.Errorf("unable to access Marathon event stream: error %v, endpoint %v", err.Error(),endpoint)
+				logger.Errorf("unable to access Marathon event stream, error: %v, endpoint: %v", err.Error(), endpoint)
 				// expire request cancellation timer immediately
 				timer.Reset(100 * time.Millisecond)
 				continue
@@ -109,14 +108,14 @@ func eventStream() {
 				timer.Reset(15 * time.Second)
 				line, err := reader.ReadString('\n')
 				if err != nil {
-					logger.Errorf("error reading Marathon event stream: error %v, endpoint %v", err.Error(),endpoint)
+					logger.Errorf("error reading Marathon event stream, error: %v, endpoint: %v", err.Error(), endpoint)
 					resp.Body.Close()
 					break
 				}
 				if !strings.HasPrefix(line, "event: ") {
 					continue
 				}
-				logger.Infof("marathon event received: error %v, endpoint %v", strings.TrimSpace(line[6:]),endpoint)
+				logger.Infof("marathon event received, event: %v, endpoint: %v", strings.TrimSpace(line[6:]), endpoint)
 
 				select {
 				case eventqueue <- true: // add reload to our queue channel, unless it is full of course.
@@ -143,7 +142,7 @@ func endpointHealth() {
 					}
 					req, err := http.NewRequest("GET", es.Endpoint+"/ping", nil)
 					if err != nil {
-						logger.Errorf("an error occurred creating endpoint health request: error %v, endpoint %v", err.Error(),es.Endpoint)
+						logger.Errorf("an error occurred creating endpoint health request, error: %v, endpoint: %v", err.Error(),es.Endpoint)
 						health.Endpoints[i].Healthy = false
 						health.Endpoints[i].Message = err.Error()
 						continue
@@ -153,14 +152,14 @@ func endpointHealth() {
 					}
 					resp, err := client.Do(req)
 					if err != nil {
-						logger.Errorf("endpoint is down: error %v, endpoint %v", err.Error(),es.Endpoint)
+						logger.Errorf("endpoint is down, error: %v, endpoint: %v", err.Error(), es.Endpoint)
 						health.Endpoints[i].Healthy = false
 						health.Endpoints[i].Message = err.Error()
 						continue
 					}
 					resp.Body.Close()
 					if resp.StatusCode != 200 {
-						logger.Errorf("endpoint check failed: status %s, endpoint %v", resp.StatusCode,es.Endpoint)
+						logger.Errorf("endpoint check failed, status: %s, endpoint: %v", resp.StatusCode, es.Endpoint)
 						health.Endpoints[i].Healthy = false
 						health.Endpoints[i].Message = resp.Status
 						continue
@@ -188,7 +187,7 @@ func eventWorker() {
 					logger.Error("config update failed")
 					go statsCount("reload.failed", 1)
 				} else {
-					logger.Infof("config updated: took", elapsed)
+					logger.Infof("config updated, took %v", elapsed)
 					go statsCount("reload.success", 1)
 					go statsTiming("reload.time", elapsed)
 				}
@@ -431,20 +430,20 @@ func reload() error {
 	jsonapps := MarathonApps{}
 	err := fetchApps(&jsontasks, &jsonapps)
 	if err != nil {
-	        logger.Errorf("unable to sync from marathon: error %v", err.Error())
+		logger.Errorf("unable to sync from marathon, error: %v", err.Error())
 		return err
 	}
 	syncApps(&jsontasks, &jsonapps)
 	config.LastUpdates.LastSync = time.Now()
 	err = writeConf()
 	if err != nil {
-	        logger.Errorf("unable to generate nginx config %v", err.Error())
+		logger.Errorf("unable to generate nginx config, error: %v", err.Error())
 		return err
 	}
 	config.LastUpdates.LastConfigValid = time.Now()
 	err = reloadNginx()
 	if err != nil {
-	        logger.Errorf("unable to reload nginx %v", err.Error())
+		logger.Errorf("unable to reload nginx, error: %v", err.Error())
 		return err
 	}
 	config.LastUpdates.LastNginxReload = time.Now()
