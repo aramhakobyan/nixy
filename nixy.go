@@ -9,10 +9,10 @@ import (
 	"os"
 	"sync"
 	"time"
-       "github.com/zooplus/golang-logging"
 	"github.com/BurntSushi/toml"
 	"github.com/gorilla/mux"
 	"github.com/peterbourgon/g2s"
+        "github.com/zooplus/golang-logging"
 )
 
 type Frontend struct {
@@ -100,7 +100,7 @@ func newHealth() Health {
 
 func nixy_reload(w http.ResponseWriter, r *http.Request) {
 
-    logger.Info("marathon reload triggered: client", r.RemoteAddr)
+	logger.Infof("marathon reload triggered, client: %v", r.RemoteAddr)
 
 	select {
 	case eventqueue <- true: // Add reload to our queue channel, unless it is full of course.
@@ -167,11 +167,11 @@ func main() {
 	}
 	file, err := ioutil.ReadFile(*configtoml)
 	if err != nil {
-		logger.Fatal("problem opening toml config", err.Error())
+		logger.Fatalf("problem opening toml config, error: %v", err.Error())
 	}
 	err = toml.Unmarshal(file, &config)
 	if err != nil {
-		logger.Fatalf("problem parsing config: error", err.Error())
+		logger.Fatalf("problem parsing config, error: %v", err.Error())
 	}
 
 	statsd, _ = setupStatsd()
@@ -189,7 +189,7 @@ func main() {
 	endpointHealth()
 	eventStream()
 	eventWorker()
-	logger.Infof("starting nixy on : %v", config.Port)
+	logger.Infof("starting nixy on :%v", config.Port)
 	err = s.ListenAndServe()
 	if err != nil {
 		logger.Fatal(err)
